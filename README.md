@@ -1,6 +1,9 @@
 # Gestión de videojuegos
 
-Práctica de Angular con formularios Template-Driven, validación en la plantilla y JSON Server como API.
+Práctica de Angular con JSON Server como API.
+
+- Rama `main`: versión original con formularios Template-Driven (`FormsModule`, `ngModel`, `ngForm`).
+- Rama `refactor/reactive-forms`: el mismo formulario migrado a Reactive Forms (`ReactiveFormsModule`, `FormGroup`, `FormControl`, `Validators`).
 
 ## Cómo arrancarlo
 
@@ -18,7 +21,7 @@ Hay que tener las dos terminales abiertas a la vez.
 src/app/
 ├── models/game.ts           # interfaz Game
 ├── services/game.service.ts # GET, POST y PUT contra JSON Server
-├── app.ts                   # lógica del formulario (guardar, editar, cancelar)
+├── app.ts                   # FormGroup del formulario y lógica (guardar, editar, limpiar)
 ├── app.html                 # formulario, mensajes de validación y listado
 └── app.css
 db.json                      # datos de la API
@@ -76,3 +79,39 @@ Porque vaciar solo el objeto no devuelve los controles a `pristine` y `untouched
 
 **17. ¿Qué diferencia existe entre la validación reactiva de esta actividad y los Reactive Forms?**
 Aquí "reactiva" quiere decir que la interfaz reacciona sola al estado del formulario, pero el formulario se define en el HTML con `ngModel`. En Reactive Forms el formulario se define en TypeScript con `FormGroup`, `FormControl` y `Validators`.
+
+## Migración a Reactive Forms
+
+| Antes (template-driven)          | Ahora (reactive)                                 |
+| -------------------------------- | ------------------------------------------------ |
+| `[(ngModel)]="game.title"`       | `formControlName="title"`                        |
+| `#gameForm="ngForm"`             | `[formGroup]="gameForm"` + `#form="ngForm"`      |
+| `title.invalid` (`#title="ngModel"`) | `gameForm.controls.title.invalid`            |
+| `required`, `minlength` en el HTML | `Validators` en TypeScript                     |
+| `saveGame(gameForm: NgForm)`     | `guardar(form: FormGroupDirective)`              |
+
+- Los errores se muestran con `invalid && (touched || form.submitted)`, así salen al salir del campo o al pulsar Guardar.
+- El botón Guardar ya no se desactiva: si el formulario es inválido, `guardar()` hace `return` y no se manda ninguna petición.
+- Después de un POST/PUT correcto se llama a `form.resetForm()`, que vuelve a los valores iniciales (por `nonNullable`) y pone `submitted` a `false`. Si la petición falla, se conservan los datos.
+- `GameService` y la interfaz `Game` no se han tocado.
+
+### Despliegue en Vercel
+
+- Build Command: `npm run build`
+- Output Directory: `dist/gestion-videojuegos/browser`
+- No se usa Router, así que no hace falta `vercel.json`.
+- En la URL de Vercel el formulario y las validaciones funcionan, pero guardar falla porque la API está en `localhost:3000`, que es el ordenador del alumno y no un servidor público. El POST se comprueba en local.
+
+### Autoevaluación
+
+**¿Dónde se encuentra ahora la fuente de verdad de los valores del formulario?**
+En el `FormGroup` `gameForm` del componente (TypeScript). Antes estaba en el objeto `game` enlazado con `ngModel`; ahora los valores se leen con `gameForm.getRawValue()`.
+
+**¿Por qué formControlName no necesita `[(ngModel)]`?**
+Porque el control ya existe en el `FormGroup`. `formControlName` busca el `FormControl` con ese nombre dentro del `[formGroup]` y lo conecta con el input en los dos sentidos, así que no hace falta un objeto aparte ni el atributo `name`.
+
+**¿Qué diferencia hay entre invalid, touched y dirty?**
+`invalid` es que el valor no cumple alguna validación; `touched` es que el usuario ha entrado y salido del campo; `dirty` es que el usuario ha cambiado el valor. Uno habla de las reglas y los otros dos de la interacción del usuario.
+
+**¿Qué aportan Git, la Pull Request y el despliegue Preview antes de fusionar main?**
+La rama permite hacer el cambio sin romper la versión de `main`. La Pull Request deja ver todos los cambios juntos y revisarlos antes de fusionar. El Preview de Vercel permite probar la versión nueva en una URL real mientras producción sigue con `main`.
