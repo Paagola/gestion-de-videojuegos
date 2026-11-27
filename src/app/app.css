@@ -35,18 +35,13 @@ select {
   box-sizing: border-box;
 }
 
-.invalid-control {
-  border: 2px solid #d33;
-}
-
 .valid-control {
   border: 2px solid #2a9d4b;
 }
 
 .error {
-  color: #d33;
+  display: block;
   margin: 0.25rem 0 0;
-  font-size: 0.9rem;
 }
 
 .error::before,
